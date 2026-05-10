@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SalatTracker" />
+  <meta name="description" content="Your personal Islamic prayer companion — track your five daily prayers with peace and purpose." />
+  <title>SalatTracker 🕌</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash" class="splash">
+  <div class="splash-inner">
+    <div class="mosque-icon">🕌</div>
+    <h1 class="splash-title">SalatTracker</h1>
+    <p class="splash-sub">بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ</p>
+    <div class="splash-loader"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen" class="screen hidden">
+  <div class="setup-card">
+    <div class="setup-icon">🌙</div>
+    <h2>Assalamu Alaikum!</h2>
+    <p>Please enter your city to receive accurate Namaz times.</p>
+    <div class="input-group">
+      <input type="text" id="city-input" placeholder="e.g. Karachi, Lahore, Dubai..." autocomplete="off" />
+      <input type="text" id="country-input" placeholder="Country (e.g. Pakistan)" autocomplete="off" />
+    </div>
+    <button id="setup-btn" class="btn-primary">Get Prayer Times 🤲</button>
+    <p id="setup-error" class="error-msg hidden"></p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app" class="screen hidden">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <span class="header-date" id="header-date"></span>
+      <span class="header-city" id="header-city">🕌</span>
+    </div>
+    <div class="header-right">
+      <button class="icon-btn" id="change-city-btn" title="Change City">📍</button>
+      <button class="icon-btn" id="refresh-btn" title="Refresh">🔄</button>
+    </div>
+  </header>
+
+  <!-- NEXT PRAYER HERO -->
+  <section class="next-prayer-section">
+    <div class="next-prayer-card">
+      <div class="next-label">Next Prayer</div>
+      <div class="next-name" id="next-name">—</div>
+      <div class="next-time" id="next-time">—</div>
+      <div class="next-countdown" id="next-countdown">Calculating...</div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+  </section>
+
+  <!-- PRAYER LIST -->
+  <section class="prayer-list-section">
+    <h3 class="section-title">Today's Prayers</h3>
+    <div class="prayer-list" id="prayer-list">
+      <!-- injected by JS -->
+    </div>
+  </section>
+
+  <!-- NAFL SECTION -->
+  <section class="nafl-section" id="nafl-section" style="display:none">
+    <h3 class="section-title">Optional Prayers (Nafl)</h3>
+    <div class="nafl-list" id="nafl-list"></div>
+  </section>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="showTab('home')">
+      <span>🕌</span><small>Home</small>
+    </button>
+    <button class="nav-btn" id="nav-report" onclick="showTab('report')">
+      <span>📊</span><small>Report</small>
+    </button>
+    <button class="nav-btn" id="nav-times" onclick="showTab('times')">
+      <span>⏰</span><small>Times</small>
+    </button>
+    <button class="nav-btn" id="nav-chat" onclick="showTab('chat')">
+      <span>💬</span><small>Ask</small>
+    </button>
+  </nav>
+
+  <!-- TABS -->
+  <div id="tab-home" class="tab-content active"></div>
+
+  <div id="tab-report" class="tab-content hidden">
+    <div class="report-container" id="report-container">
+      <div class="report-header">
+        <h2>📋 Daily Namaz Report</h2>
+        <p id="report-date-city"></p>
+      </div>
+      <div id="report-body"></div>
+      <div id="report-score" class="report-score"></div>
+      <div class="report-msg" id="report-msg"></div>
+    </div>
+  </div>
+
+  <div id="tab-times" class="tab-content hidden">
+    <div class="times-container">
+      <h2>📅 All Prayer Times</h2>
+      <p id="times-city-label" style="opacity:0.6; margin-bottom:1rem;"></p>
+      <div id="all-times-list"></div>
+      <div class="special-times">
+        <h3>Special Times</h3>
+        <div id="special-times-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-chat" class="tab-content hidden">
+    <div class="chat-container">
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Ask about prayer times..." />
+        <button id="chat-send">➤</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- PRAYER PROMPT MODAL -->
+<div id="prayer-modal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-icon">🤲</div>
+    <h3 id="modal-title">Did you offer Fajr?</h3>
+    <p id="modal-subtitle">Please update your prayer record.</p>
+    <div class="modal-btns">
+      <button class="btn-yes" onclick="markPrayer(true)">✅ Yes, Alhamdulillah</button>
+      <button class="btn-no" onclick="markPrayer(false)">❌ Missed</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# SalatTracker .gitignore
+*.log
+.DS_Store
+Thumbs.db
+node_modules/
+.env
+generate_icons.py
