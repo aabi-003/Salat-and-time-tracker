@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="ur" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Sallat & Time Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070f1c;
+    --bg2: #0d1a2e;
+    --bg3: #0f2040;
+    --green: #27b870;
+    --green2: #1d9558;
+    --gold: #c8a84b;
+    --gold2: #e8c86a;
+    --text: #e8eaf0;
+    --text2: #9ba3b5;
+    --card: #0d1a2e;
+    --border: rgba(200,168,75,0.18);
+    --red: #e05555;
+    --blue: #4a9eff;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    max-width: 430px;
+    margin: 0 auto;
+    position: relative;
+    overflow-x: hidden;
+  }
+  /* Ambient background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -100px; left: -100px;
+    width: 350px; height: 350px;
+    background: radial-gradient(circle, rgba(39,184,112,0.07) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -80px; right: -80px;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(200,168,75,0.06) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(180deg, #0d1a2e 0%, transparent 100%);
+    padding: 18px 20px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-logo { display: flex; align-items: center; gap: 10px; }
+  .header-logo .mosque-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--green), var(--green2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .header-logo h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 16px; font-weight: 700;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-logo h1 span { display: block; font-size: 10px; color: var(--text2); -webkit-text-fill-color: var(--text2); font-family: 'DM Sans', sans-serif; font-weight: 400; }
+  .header-date { text-align: right; font-size: 12px; color: var(--text2); }
+  .header-date strong { display: block; color: var(--gold); font-size: 13px; }
+
+  /* ── PAGES ── */
+  .page { display: none; padding: 16px 16px 100px; animation: fadeIn 0.3s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    background: rgba(13,26,46,0.97);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex; z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom, 8px);
+  }
+  .nav-btn {
+    flex: 1; padding: 10px 4px 8px;
+    background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: var(--text2); font-family: 'DM Sans', sans-serif;
+    font-size: 10px; font-weight: 500;
+    transition: color 0.2s;
+    position: relative;
+  }
+  .nav-btn .nav-icon { font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center; height: 26px; }
+  .nav-btn .nav-icon svg { stroke: currentColor; transition: stroke 0.2s; }
+  .nav-btn.active .nav-icon svg { stroke: var(--green); }
+  .nav-btn.active { color: var(--green); }
+  .nav-btn.active::after {
+    content: '';
+    position: absolute; top: 0; left: 20%; right: 20%;
+    height: 2px; background: var(--green);
+    border-radius: 0 0 4px 4px;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(200,168,75,0.3), transparent);
+  }
+
+  /* ── CITY SETUP OVERLAY ── */
+  #cityOverlay {
+    position: fixed; inset: 0;
+    background: rgba(7,15,28,0.97);
+    z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .city-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px 24px;
+    width: 100%; max-width: 360px;
+    text-align: center;
+  }
+  .city-box .mosque-big { font-size: 56px; margin-bottom: 16px; }
+  .city-box h2 {
+    font-family: 'Cinzel', serif;
+    color: var(--gold);
+    font-size: 22px; margin-bottom: 8px;
+  }
+  .city-box p { color: var(--text2); font-size: 14px; margin-bottom: 24px; line-height: 1.5; }
+  .city-input {
+    width: 100%; padding: 14px 16px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 12px; color: var(--text);
+    font-size: 16px; font-family: 'DM Sans', sans-serif;
+    outline: none; margin-bottom: 12px;
+  }
+  .city-input:focus { border-color: var(--green); }
+  .btn-primary {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, var(--green), var(--green2));
+    border: none; border-radius: 12px;
+    color: white; font-size: 16px; font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .city-popular { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 16px; }
+  .city-chip {
+    padding: 6px 14px; background: var(--bg3);
+    border: 1px solid var(--border); border-radius: 20px;
+    color: var(--text2); font-size: 13px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .city-chip:hover { border-color: var(--green); color: var(--green); }
+
+  /* ── TIMES PAGE ── */
+  .next-prayer-hero {
+    background: linear-gradient(135deg, #0a2010 0%, #0d2918 50%, #082010 100%);
+    border: 1px solid rgba(39,184,112,0.3);
+    border-radius: 20px; padding: 24px 20px;
+    text-align: center; margin-bottom: 16px;
+    position: relative; overflow: hidden;
+  }
+  .next-prayer-hero::before {
+    content: '';
+    position: absolute; top: -40%; left: 50%; transform: translateX(-50%);
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(39,184,112,0.15) 0%, transparent 70%);
+  }
+  .next-label { font-size: 11px; color: var(--green); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .next-name { font-family: 'Cinzel', serif; font-size: 28px; color: var(--gold); margin-bottom: 4px; }
+  .next-time-display { font-size: 44px; font-weight: 300; color: var(--text); letter-spacing: -1px; margin-bottom: 6px; font-family: 'DM Sans', sans-serif; }
+  .next-countdown { font-size: 14px; color: var(--text2); }
+  .next-countdown span { color: var(--green); font-weight: 600; }
+
+  .section-title {
+    font-size: 11px; font-weight: 600; letter-spacing: 2px;
+    color: var(--text2); text-transform: uppercase;
+    margin: 20px 0 10px; padding-left: 4px;
+  }
+
+  /* Farz prayer cards */
+  .farz-grid { display: flex; flex-direction: column; gap: 8px; }
+  .farz-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: border-color 0.2s;
+  }
+  .farz-card.done { border-color: rgba(39,184,112,0.4); background: rgba(39,184,112,0.05); }
+  .farz-card.missed { border-color: rgba(224,85,85,0.3); background: rgba(224,85,85,0.04); }
+  .farz-left { display: flex; align-items: center; gap: 12px; }
+  .farz-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text2); flex-shrink: 0;
+  }
+  .farz-card.done .farz-dot { background: var(--green); }
+  .farz-card.missed .farz-dot { background: var(--red); }
+  .farz-card.active-now .farz-dot { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+  .farz-arabic { font-size: 20px; color: var(--text); margin-bottom: 1px; font-family: 'DM Sans', sans-serif; }
+  .farz-time { font-size: 12px; color: var(--text2); }
+  .farz-actions { display: flex; gap: 6px; }
+  .farz-btn {
+    padding: 6px 12px; border-radius: 8px; border: none;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+  }
+  .btn-done { background: rgba(39,184,112,0.15); color: var(--green); border: 1px solid rgba(39,184,112,0.3); }
+  .btn-done:hover, .btn-done.sel { background: var(--green); color: white; }
+  .btn-missed { background: rgba(224,85,85,0.1); color: var(--red); border: 1px solid rgba(224,85,85,0.2); }
+  .btn-missed:hover, .btn-missed.sel { background: var(--red); color: white; }
+  .farz-status-badge {
+    padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .badge-done { background: rgba(39,184,112,0.15); color: var(--green); }
+  .badge-missed { background: rgba(224,85,85,0.1); color: var(--red); }
+
+  /* Extra times */
+  .extra-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .extra-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px;
+  }
+  .extra-card .e-name { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .extra-card .e-time { font-size: 16px; font-weight: 600; color: var(--gold); }
+
+  /* Makrooh */
+  .makrooh-grid { display: flex; flex-direction: column; gap: 6px; }
+  .makrooh-row {
+    background: rgba(224,85,85,0.05); border: 1px solid rgba(224,85,85,0.15);
+    border-radius: 10px; padding: 10px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .makrooh-row .m-name { font-size: 13px; color: var(--text); }
+  .makrooh-row .m-time { font-size: 12px; color: var(--red); font-weight: 600; }
+
+  /* ── ASK PAGE ── */
+  .ask-header { text-align: center; padding: 10px 0 16px; }
+  .ask-header h2 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 20px; margin-bottom: 4px; }
+  .ask-header p { color: var(--text2); font-size: 13px; }
+  .quick-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .quick-btn {
+    padding: 8px 14px; background: var(--bg3);
+    border: 1px solid var(--border); border-radius: 20px;
+    color: var(--text2); font-size: 12px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+  }
+  .quick-btn:hover { border-color: var(--green); color: var(--green); }
+  .chat-area {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px;
+    min-height: 280px; max-height: 380px; overflow-y: auto;
+    margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px;
+    scroll-behavior: smooth;
+  }
+  .chat-msg { display: flex; gap: 8px; align-items: flex-start; }
+  .chat-msg.user { flex-direction: row-reverse; }
+  .msg-avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .msg-avatar.bot { background: rgba(39,184,112,0.2); }
+  .msg-avatar.user { background: rgba(200,168,75,0.2); }
+  .msg-bubble {
+    max-width: 75%; padding: 10px 14px; border-radius: 14px;
+    font-size: 13px; line-height: 1.5;
+  }
+  .chat-msg.bot .msg-bubble { background: var(--bg3); color: var(--text); border-bottom-left-radius: 4px; }
+  .chat-msg.user .msg-bubble { background: rgba(39,184,112,0.15); color: var(--text); border-bottom-right-radius: 4px; border: 1px solid rgba(39,184,112,0.2); }
+  .typing-dots span {
+    display: inline-block; width: 6px; height: 6px;
+    background: var(--text2); border-radius: 50; margin: 0 2px;
+    animation: dot 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dot { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+  .ask-input-row { display: flex; gap: 8px; }
+  .ask-input {
+    flex: 1; padding: 12px 16px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 12px; color: var(--text);
+    font-size: 14px; font-family: 'DM Sans', sans-serif;
+    outline: none;
+  }
+  .ask-input:focus { border-color: var(--green); }
+  .ask-send {
+    padding: 12px 16px; background: var(--green);
+    border: none; border-radius: 12px;
+    color: white; font-size: 18px; cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .ask-send:hover { opacity: 0.85; }
+
+  /* ── REPORT PAGE ── */
+  .score-ring-wrap { display: flex; justify-content: center; padding: 20px 0; }
+  .score-ring-svg { transform: rotate(-90deg); }
+  .ring-track { fill: none; stroke: var(--bg3); stroke-width: 12; }
+  .ring-progress { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 0.8s ease; }
+  .score-center {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    text-align: center;
+  }
+  .score-ring-container { position: relative; width: 160px; height: 160px; }
+  .score-num { font-size: 36px; font-weight: 700; color: var(--text); font-family: 'Cinzel', serif; }
+  .score-label { font-size: 12px; color: var(--text2); }
+  .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .report-stat {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; text-align: center;
+  }
+  .report-stat .rs-num { font-size: 28px; font-weight: 700; font-family: 'Cinzel', serif; }
+  .report-stat .rs-label { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .rs-done .rs-num { color: var(--green); }
+  .rs-missed .rs-num { color: var(--red); }
+  .rs-streak .rs-num { color: var(--gold); }
+  .rs-pending .rs-num { color: var(--text2); }
+  .report-list { display: flex; flex-direction: column; gap: 8px; }
+  .report-row {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .report-row .rr-left { display: flex; align-items: center; gap: 10px; }
+  .rr-arabic { font-size: 18px; }
+  .rr-name { font-size: 13px; color: var(--text2); }
+  .rr-badge {
+    padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .rr-done { background: rgba(39,184,112,0.15); color: var(--green); }
+  .rr-missed { background: rgba(224,85,85,0.1); color: var(--red); }
+  .rr-pending { background: rgba(155,163,181,0.1); color: var(--text2); }
+
+  /* ── SETTINGS PAGE ── */
+  .settings-section { margin-bottom: 20px; }
+  .settings-section .ss-title {
+    font-size: 10px; letter-spacing: 2px; color: var(--text2);
+    text-transform: uppercase; margin-bottom: 10px; padding-left: 4px;
+  }
+  .setting-row {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .setting-row .sr-left { display: flex; align-items: center; gap: 12px; }
+  .sr-icon { font-size: 20px; }
+  .sr-label { font-size: 14px; color: var(--text); }
+  .sr-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .sr-value { font-size: 14px; color: var(--gold); font-weight: 600; }
+  .btn-setting {
+    padding: 8px 16px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg3);
+    color: var(--text); font-size: 13px; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-setting:hover { border-color: var(--green); color: var(--green); }
+  .btn-danger {
+    padding: 8px 16px; border-radius: 10px;
+    border: 1px solid rgba(224,85,85,0.3); background: rgba(224,85,85,0.08);
+    color: var(--red); font-size: 13px; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+  }
+  /* Toggle switch */
+  .toggle { position: relative; width: 44px; height: 24px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0; border-radius: 24px;
+    background: var(--bg3); border: 1px solid var(--border);
+    cursor: pointer; transition: 0.3s;
+  }
+  .toggle-slider::before {
+    content: ''; position: absolute;
+    width: 18px; height: 18px; left: 2px; top: 2px;
+    background: var(--text2); border-radius: 50%; transition: 0.3s;
+  }
+  input:checked + .toggle-slider { background: rgba(39,184,112,0.3); border-color: var(--green); }
+  input:checked + .toggle-slider::before { transform: translateX(20px); background: var(--green); }
+
+  /* ── CITY CHANGE MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(7,15,28,0.9);
+    z-index: 150; display: none;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 24px; width: 100%; max-width: 360px;
+  }
+  .modal-box h3 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 18px; margin-bottom: 16px; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+  .btn-secondary {
+    flex: 1; padding: 12px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 14px; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+  }
+
+  /* Loading state */
+  .loading-pulse {
+    background: linear-gradient(90deg, var(--bg3) 25%, var(--bg2) 50%, var(--bg3) 75%);
+    background-size: 200% 100%;
+    animation: pulse 1.5s infinite;
+    border-radius: 8px; height: 16px; margin: 4px 0;
+  }
+  @keyframes pulse { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+  /* Notification dot */
+  .notif-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block; margin-left: 6px;
+  }
+  .notif-on { background: var(--green); }
+  .notif-off { background: var(--red); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 20px;
+    font-size: 13px; color: var(--text);
+    z-index: 300; opacity: 0; transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* Install banner */
+  .install-banner {
+    background: linear-gradient(135deg, #0a2010, #0d2918);
+    border: 1px solid rgba(39,184,112,0.3);
+    border-radius: 12px; padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .install-banner .ib-left { display: flex; align-items: center; gap: 10px; }
+  .ib-text .ib-title { font-size: 13px; color: var(--text); font-weight: 600; }
+  .ib-text .ib-sub { font-size: 11px; color: var(--text2); }
+  .btn-install {
+    padding: 8px 14px; background: var(--green);
+    border: none; border-radius: 8px;
+    color: white; font-size: 12px; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+  }
+
+  .empty-chat {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: var(--text2); text-align: center; padding: 20px;
+    gap: 8px;
+  }
+  .empty-chat .ec-icon { font-size: 40px; margin-bottom: 8px; }
+  .empty-chat p { font-size: 13px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<!-- City Setup Overlay -->
+<div id="cityOverlay">
+  <div class="city-box">
+    <div class="mosque-big">🕌</div>
+    <h2>Apna Sheher Batao</h2>
+    <p>Ek baar sheher save kar lo — phir dobara nahi puchha jayega</p>
+    <input type="text" class="city-input" id="cityInput" placeholder="Sheher ka naam likhein..." />
+    <button class="btn-primary" id="saveCity">Save</button>
+    <div class="city-popular">
+      <div class="city-chip" onclick="setCity('Karachi')">Karachi</div>
+      <div class="city-chip" onclick="setCity('Lahore')">Lahore</div>
+      <div class="city-chip" onclick="setCity('Islamabad')">Islamabad</div>
+      <div class="city-chip" onclick="setCity('Rawalpindi')">Rawalpindi</div>
+      <div class="city-chip" onclick="setCity('Faisalabad')">Faisalabad</div>
+      <div class="city-chip" onclick="setCity('Peshawar')">Peshawar</div>
+    </div>
+  </div>
+</div>
+
+<!-- City Change Modal -->
+<div class="modal-overlay" id="cityModal">
+  <div class="modal-box">
+    <h3>Sheher Badlo</h3>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:12px;">Naya sheher enter karo</p>
+    <input type="text" class="city-input" id="cityChangeInput" placeholder="Naya sheher..." />
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeCityModal()">Cancel</button>
+      <button class="btn-primary" style="flex:1" onclick="changeCity()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-logo">
+    <div class="mosque-icon">🕌</div>
+    <h1>Sallat Tracker<span id="headerCity">Loading...</span></h1>
+  </div>
+  <div class="header-date">
+    <strong id="headerTime">--:--</strong>
+    <span id="headerDate">---</span>
+  </div>
+</div>
+
+<!-- ════════ TIMES PAGE ════════ -->
+<div class="page active" id="page-times">
+
+  <!-- Next Prayer Hero -->
+  <div class="next-prayer-hero">
+    <div class="next-label">▶ AGLA WAQT</div>
+    <div class="next-name" id="nextPrayerName">Loading...</div>
+    <div class="next-time-display" id="nextPrayerTime">--:--</div>
+    <div class="next-countdown">Baki: <span id="nextCountdown">---</span></div>
+  </div>
+
+  <!-- 5 Farz Prayers -->
+  <div class="section-title">☪ Panj Waqt Farz</div>
+  <div class="farz-grid" id="farzGrid">
+    <!-- Dynamically generated -->
+  </div>
+
+  <!-- Extra Times -->
+  <div class="section-title">✦ Mustahab Auqaat</div>
+  <div class="extra-grid">
+    <div class="extra-card">
+      <div class="e-name">🌅 Ishraq</div>
+      <div class="e-time" id="ishraqTime">---</div>
+    </div>
+    <div class="extra-card">
+      <div class="e-name">☀️ Chasht</div>
+      <div class="e-time" id="chashtTime">---</div>
+    </div>
+    <div class="extra-card">
+      <div class="e-name">🌙 Tahajjud</div>
+      <div class="e-time" id="tahajjudTime">---</div>
+    </div>
+    <div class="extra-card">
+      <div class="e-name">🕛 Zawaal</div>
+      <div class="e-time" id="zawaalTime">---</div>
+    </div>
+  </div>
+
+  <!-- Makrooh Times -->
+  <div class="section-title">⚠ Makrooh Auqaat</div>
+  <div class="makrooh-grid">
+    <div class="makrooh-row">
+      <span class="m-name">Tulu-e-Aftab (Sunrise)</span>
+      <span class="m-time" id="mkSunrise">---</span>
+    </div>
+    <div class="makrooh-row">
+      <span class="m-name">Zawaal (Solar Noon)</span>
+      <span class="m-time" id="mkZawaal">---</span>
+    </div>
+    <div class="makrooh-row">
+      <span class="m-name">Ghurub-e-Aftab (Sunset)</span>
+      <span class="m-time" id="mkSunset">---</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ ASK PAGE ════════ -->
+<div class="page" id="page-ask">
+  <div class="ask-header">
+    <h2>🕐 Prayer Times</h2>
+    <p>Kisi bhi namaz ka waqt poochho</p>
+  </div>
+
+  <div class="quick-btns">
+    <button class="quick-btn" onclick="quickAsk('Fajr')">🌅 Fajr</button>
+    <button class="quick-btn" onclick="quickAsk('Dhuhr')">☀️ Dhuhr</button>
+    <button class="quick-btn" onclick="quickAsk('Asr')">🌤️ Asr</button>
+    <button class="quick-btn" onclick="quickAsk('Maghrib')">🌇 Maghrib</button>
+    <button class="quick-btn" onclick="quickAsk('Isha')">🌙 Isha</button>
+    <button class="quick-btn" onclick="document.getElementById('askInput').value='sab auqaat';sendAsk()">📋 All Times</button>
+  </div>
+
+  <div class="chat-area" id="chatArea">
+    <div class="empty-chat">
+      <div class="ec-icon">🕌</div>
+      <p>Kisi namaz ka naam likho<br>ya upar se select karo</p>
+    </div>
+  </div>
+
+  <div class="ask-input-row">
+    <input type="text" class="ask-input" id="askInput" placeholder="Namaz ka naam likho..." />
+    <button class="ask-send" onclick="sendAsk()">➤</button>
+  </div>
+</div>
+
+<!-- ════════ REPORT PAGE ════════ -->
+<div class="page" id="page-report">
+  <div class="section-title" style="margin-top:4px">📊 Aaj Ki Report</div>
+
+  <!-- Score Ring -->
+  <div class="score-ring-wrap">
+    <div class="score-ring-container">
+      <svg class="score-ring-svg" width="160" height="160">
+        <circle class="ring-track" cx="80" cy="80" r="68"/>
+        <circle class="ring-progress" id="ringProgress" cx="80" cy="80" r="68"
+          stroke="url(#ringGrad)" stroke-dasharray="427" stroke-dashoffset="427"/>
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#27b870"/>
+            <stop offset="100%" stop-color="#c8a84b"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="score-center">
+        <div class="score-num" id="scoreNum">0/5</div>
+        <div class="score-label">Ada ki</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="report-grid">
+    <div class="report-stat rs-done">
+      <div class="rs-num" id="statDone">0</div>
+      <div class="rs-label">✅ Ada Ki</div>
+    </div>
+    <div class="report-stat rs-missed">
+      <div class="rs-num" id="statMissed">0</div>
+      <div class="rs-label">❌ Reh Gayi</div>
+    </div>
+    <div class="report-stat rs-pending">
+      <div class="rs-num" id="statPending">5</div>
+      <div class="rs-label">⏳ Pending</div>
+    </div>
+    <div class="report-stat rs-streak">
+      <div class="rs-num" id="statStreak">0</div>
+      <div class="rs-label">🔥 Din Streak</div>
+    </div>
+  </div>
+
+  <!-- Per namaz list -->
+  <div class="section-title">Namaz ki Detail</div>
+  <div class="report-list" id="reportList">
+    <!-- Dynamically generated -->
+  </div>
+</div>
+
+<!-- ════════ SETTINGS PAGE ════════ -->
+<div class="page" id="page-settings">
+
+  <!-- Install Banner -->
+  <div class="install-banner" id="installBanner" style="display:none">
+    <div class="ib-left">
+      <span style="font-size:24px">📱</span>
+      <div class="ib-text">
+        <div class="ib-title">App Install Karo</div>
+        <div class="ib-sub">Home screen pe add karo</div>
+      </div>
+    </div>
+    <button class="btn-install" onclick="installPWA()">Install</button>
+  </div>
+
+  <div class="settings-section">
+    <div class="ss-title">📍 Location</div>
+    <div class="setting-row">
+      <div class="sr-left">
+        <span class="sr-icon">🏙️</span>
+        <div>
+          <div class="sr-label">Mera Sheher</div>
+          <div class="sr-sub" id="cityDisplay">---</div>
+        </div>
+      </div>
+      <button class="btn-setting" onclick="openCityModal()">Change</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="ss-title">🔔 Notifications</div>
+    <div class="setting-row">
+      <div class="sr-left">
+        <span class="sr-icon">📳</span>
+        <div>
+          <div class="sr-label">Namaz Notification</div>
+          <div class="sr-sub">Waqt pe aur 30 min baad</div>
+        </div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="notifToggle" onchange="toggleNotif()">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="setting-row">
+      <div class="sr-left">
+        <span class="sr-icon">🧪</span>
+        <div>
+          <div class="sr-label">Test Notification</div>
+          <div class="sr-sub">Abhi ek test bhejo</div>
+        </div>
+      </div>
+      <button class="btn-setting" onclick="testNotif()">Test</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="ss-title">📋 Data</div>
+    <div class="setting-row">
+      <div class="sr-left">
+        <span class="sr-icon">🔄</span>
+        <div>
+          <div class="sr-label">Daily Auto-Reset</div>
+          <div class="sr-sub">Roz midnight pe reset hoga</div>
+        </div>
+      </div>
+      <span class="sr-value">ON</span>
+    </div>
+    <div class="setting-row">
+      <div class="sr-left">
+        <span class="sr-icon">🗑️</span>
+        <div>
+          <div class="sr-label">Aaj ka Record Mitao</div>
+          <div class="sr-sub">Sab status reset ho ga</div>
+        </div>
+      </div>
+      <button class="btn-danger" onclick="resetRecord()">Reset</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="ss-title">ℹ️ App Info</div>
+    <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+      <div class="sr-left">
+        <span class="sr-icon">🕌</span>
+        <div>
+          <div class="sr-label">Sallat & Time Tracker</div>
+          <div class="sr-sub">v1.0 • Method: Karachi (UIS) • Pakistan</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Navigation -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="goTo('times',this)">
+    <span class="nav-icon nav-combo">
+      <svg width="38" height="22" viewBox="0 0 38 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Clock on left -->
+        <circle cx="10" cy="11" r="8.5" stroke="currentColor" stroke-width="1.6"/>
+        <polyline points="10,5.5 10,11 13.5,13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Masjid on right -->
+        <!-- Dome -->
+        <path d="M24 13 Q24 8 29 8 Q34 8 34 13" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <!-- Minaret left -->
+        <rect x="22" y="10" width="2.2" height="7" rx="0.6" stroke="currentColor" stroke-width="1.3" fill="none"/>
+        <path d="M22.2 10 Q23.1 7.5 24 10" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+        <!-- Minaret right -->
+        <rect x="33.8" y="10" width="2.2" height="7" rx="0.6" stroke="currentColor" stroke-width="1.3" fill="none"/>
+        <path d="M34 10 Q34.9 7.5 35.8 10" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+        <!-- Base/body -->
+        <rect x="22" y="13" width="14" height="4" rx="0.8" stroke="currentColor" stroke-width="1.4" fill="none"/>
+        <!-- Door -->
+        <path d="M27.5 17 L27.5 14.5 Q29 13 30.5 14.5 L30.5 17" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <span>Times</span>
+  </button>
+  <button class="nav-btn" onclick="goTo('ask',this)">
+    <span class="nav-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        <line x1="9" y1="10" x2="15" y2="10"/>
+        <line x1="9" y1="14" x2="13" y2="14"/>
+      </svg>
+    </span>
+    <span>Ask</span>
+  </button>
+  <button class="nav-btn" onclick="goTo('report',this)">
+    <span class="nav-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+    </span>
+    <span>Report</span>
+  </button>
+  <button class="nav-btn" onclick="goTo('settings',this)">
+    <span class="nav-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </span>
+    <span>Settings</span>
+  </button>
+</nav>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+const PRAYERS = [
+  { key: 'Fajr',    arabic: 'الفجر',   apiKey: 'Fajr' },
+  { key: 'Dhuhr',   arabic: 'الظهر',   apiKey: 'Dhuhr' },
+  { key: 'Asr',     arabic: 'العصر',   apiKey: 'Asr' },
+  { key: 'Maghrib', arabic: 'المغرب',  apiKey: 'Maghrib' },
+  { key: 'Isha',    arabic: 'العشاء',  apiKey: 'Isha' },
+];
+
+let state = {
+  city: localStorage.getItem('sallat_city') || null,
+  timings: null,
+  todayDate: null,
+  status: JSON.parse(localStorage.getItem('sallat_status') || '{}'),
+  streak: parseInt(localStorage.getItem('sallat_streak') || '0'),
+  notifEnabled: localStorage.getItem('sallat_notif') === 'true',
+  chatHistory: [],
+};
+
+let deferredPrompt = null;
+let countdownInterval = null;
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); deferredPrompt = e;
+  document.getElementById('installBanner').style.display = 'flex';
+});
+
+window.onload = () => {
+  checkMidnightReset();
+  updateClock();
+  setInterval(updateClock, 1000);
+  document.getElementById('notifToggle').checked = state.notifEnabled;
+  document.getElementById('saveCity').addEventListener('click', saveFirstCity);
+  document.getElementById('cityInput').addEventListener('keypress', e => { if(e.key==='Enter') saveFirstCity(); });
+  document.getElementById('askInput').addEventListener('keypress', e => { if(e.key==='Enter') sendAsk(); });
+  document.getElementById('cityChangeInput').addEventListener('keypress', e => { if(e.key==='Enter') changeCity(); });
+
+  if (state.city) {
+    hideCityOverlay();
+    loadTimings(state.city);
+    updateCityDisplay();
+  }
+};
+
+// ═══════════════════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  document.getElementById('headerTime').textContent =
+    now.toLocaleTimeString('en-PK', { hour:'2-digit', minute:'2-digit', hour12: true });
+  document.getElementById('headerDate').textContent =
+    now.toLocaleDateString('en-PK', { day:'numeric', month:'short' });
+}
+
+// ═══════════════════════════════════════════════════════
+// CITY SETUP
+// ═══════════════════════════════════════════════════════
+function setCity(name) {
+  document.getElementById('cityInput').value = name;
+}
+function saveFirstCity() {
+  const city = document.getElementById('cityInput').value.trim();
+  if (!city) { showToast('Sheher ka naam likhein ⚠️'); return; }
+  if (city.length < 2) { showToast('Sahi naam likhein ⚠️'); return; }
+  if (/[0-9@#$%^&*]/.test(city)) { showToast('❌ Sirf sheher ka naam likhein'); return; }
+  const btn = document.getElementById('saveCity');
+  btn.disabled = true; btn.textContent = 'Loading...';
+  state.city = city;
+  localStorage.setItem('sallat_city', city);
+  hideCityOverlay();
+  updateCityDisplay();
+  loadTimings(city).finally(() => { btn.disabled = false; btn.textContent = 'Save'; });
+}
+function hideCityOverlay() {
+  document.getElementById('cityOverlay').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════
+// LOAD TIMINGS
+// ═══════════════════════════════════════════════════════
+async function loadTimings(city) {
+  showLoadingState();
+  try {
+    const url = `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=Pakistan&method=1`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code !== 200) throw new Error('City not found');
+    // Validate — agar timings mein sab zero ho tou invalid city
+    const t = data.data.timings;
+    if (!t || !t.Fajr || t.Fajr === '00:00') throw new Error('Invalid city');
+    state.timings = t;
+    state.todayDate = data.data.date.readable;
+    renderTimings();
+    startCountdown();
+  } catch(e) {
+    showToast(`❌ "${city}" nahi mila — sheher ka sahi naam likhein`);
+    // If first time setup, reshow overlay
+    if (!localStorage.getItem('sallat_lastDate')) {
+      document.getElementById('cityOverlay').style.display = 'flex';
+    }
+    console.error(e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════
+function renderTimings() {
+  if (!state.timings) return;
+  const t = state.timings;
+
+  // Farz Grid
+  const grid = document.getElementById('farzGrid');
+  grid.innerHTML = '';
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+
+  PRAYERS.forEach((p, i) => {
+    const status = state.status[p.key] || 'pending';
+    const pMin = parseTimeToMin(t[p.apiKey]);
+
+    // A prayer is "available to mark" if its waqt has started (pMin <= nowMin)
+    // OR it's the currently active waqt window
+    // Future = waqt abhi shuru nahi hua
+    const isFuture = pMin > nowMin;
+
+    const card = document.createElement('div');
+    // active-now = current waqt chal raha hai (pMin <= nowMin and next prayer hasn't started)
+    const nextP = PRAYERS[i+1];
+    const nextMin = nextP ? parseTimeToMin(t[nextP.apiKey]) : 1440;
+    const isActiveNow = pMin <= nowMin && nowMin < nextMin;
+    card.className = `farz-card ${status !== 'pending' ? status : ''} ${isActiveNow ? 'active-now' : ''}`;
+    card.id = `card-${p.key}`;
+
+    let actionHTML = '';
+    if (status !== 'pending') {
+      // Already marked — show badge
+      actionHTML = `<span class="farz-status-badge ${status==='done'?'badge-done':'badge-missed'}">
+        ${status==='done'?'✓ Ada':'✗ Qaza'}
+      </span>`;
+    } else if (isFuture) {
+      // Future namaz — no buttons, just upcoming label
+      actionHTML = `<span class="farz-status-badge" style="background:rgba(155,163,181,0.08);color:var(--text2)">⏳ Upcoming</span>`;
+    } else {
+      // Current or passed — show Done/Missed
+      actionHTML = `
+        <div class="farz-actions">
+          <button class="farz-btn btn-done" onclick="markPrayer('${p.key}','done')">Done ✓</button>
+          <button class="farz-btn btn-missed" onclick="markPrayer('${p.key}','missed')">Missed ✗</button>
+        </div>`;
+    }
+
+    card.innerHTML = `
+      <div class="farz-left">
+        <div class="farz-dot"></div>
+        <div>
+          <div class="farz-arabic">${p.arabic}</div>
+          <div class="farz-time">${formatTime(t[p.apiKey])}</div>
+        </div>
+      </div>
+      ${actionHTML}
+    `;
+    grid.appendChild(card);
+  });
+
+  // Extra times
+  const sunrise = t['Sunrise'];
+  const sunriseMin = parseTimeToMin(sunrise);
+  document.getElementById('ishraqTime').textContent = minToTime(sunriseMin + 18);
+  document.getElementById('chashtTime').textContent = minToTime(Math.floor((sunriseMin + parseTimeToMin(t['Dhuhr'])) / 2));
+  const isha = parseTimeToMin(t['Isha']);
+  const fajr = parseTimeToMin(t['Fajr']);
+  document.getElementById('tahajjudTime').textContent = minToTime(Math.floor((isha + fajr + 1440) / 2) % 1440);
+  document.getElementById('zawaalTime').textContent = formatTime(t['Dhuhr']);
+
+  // Makrooh
+  document.getElementById('mkSunrise').textContent = formatTime(sunrise) + ' (+20 min)';
+  document.getElementById('mkZawaal').textContent = formatTime(t['Dhuhr']);
+  document.getElementById('mkSunset').textContent = formatTime(t['Sunset']);
+
+  // Report
+  updateReport();
+
+  // Auto-schedule notifications if enabled
+  if (state.notifEnabled && Notification.permission === 'granted') {
+    scheduleAllNotifications();
+  }
+}
+
+function showLoadingState() {
+  document.getElementById('nextPrayerName').textContent = 'Loading...';
+  document.getElementById('nextPrayerTime').textContent = '--:--';
+  document.getElementById('nextCountdown').textContent = '---';
+  document.getElementById('farzGrid').innerHTML = PRAYERS.map(() =>
+    `<div class="farz-card" style="height:60px"><div class="loading-pulse" style="width:60%;margin:8px 0"></div></div>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// PRAYER STATUS
+// ═══════════════════════════════════════════════════════
+function markPrayer(key, status) {
+  state.status[key] = status;
+  localStorage.setItem('sallat_status', JSON.stringify(state.status));
+  renderTimings();
+  updateReport();
+  showToast(status === 'done' ? `✅ ${key} ada ho gayi` : `❌ ${key} qaza ho gayi`);
+  if (status === 'done') updateStreak();
+}
+
+function updateStreak() {
+  const doneAll = PRAYERS.every(p => state.status[p.key] === 'done');
+  if (doneAll) {
+    state.streak++;
+    localStorage.setItem('sallat_streak', state.streak);
+  }
+  updateReport();
+}
+
+// ═══════════════════════════════════════════════════════
+// COUNTDOWN + AUTO-MISS
+// ═══════════════════════════════════════════════════════
+function startCountdown() {
+  if (countdownInterval) clearInterval(countdownInterval);
+  updateNextPrayer();
+  checkAutoMiss();
+  countdownInterval = setInterval(() => {
+    updateNextPrayer();
+    checkAutoMiss();
+  }, 30000); // check every 30 sec
+  setInterval(updateNextPrayer, 1000); // countdown ticks every sec
+}
+
+function checkAutoMiss() {
+  if (!state.timings) return;
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+
+  PRAYERS.forEach((p, i) => {
+    // Already marked — skip
+    if (state.status[p.key] && state.status[p.key] !== 'pending') return;
+
+    const pMin = parseTimeToMin(state.timings[p.apiKey]);
+    const nextPrayer = PRAYERS[i + 1];
+    let endMin = nextPrayer ? parseTimeToMin(state.timings[nextPrayer.apiKey]) : 1439;
+    if (p.key === 'Isha') endMin = 1439;
+
+    // Waqt nikal gaya — popup dikhao (ek baar)
+    if (nowMin > endMin && !state[`asked_${p.key}`]) {
+      state[`asked_${p.key}`] = true;
+      showMissedPrompt(p);
+    }
+  });
+}
+
+function showMissedPrompt(p) {
+  // In-app banner — browser confirm nahi
+  const existing = document.getElementById('missedBanner');
+  if (existing) existing.remove();
+
+  const banner = document.createElement('div');
+  banner.id = 'missedBanner';
+  banner.style.cssText = `
+    position:fixed; bottom:80px; left:12px; right:12px;
+    background:#0d1a2e; border:1px solid rgba(224,85,85,0.4);
+    border-radius:14px; padding:14px 16px; z-index:200;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; box-shadow:0 4px 24px rgba(0,0,0,0.5);
+    animation: slideUp 0.3s ease;
+  `;
+  banner.innerHTML = `
+    <div style="flex:1">
+      <div style="color:#e8eaf0;font-size:14px;font-weight:600">${p.arabic} — ${p.key}</div>
+      <div style="color:#9ba3b5;font-size:12px;margin-top:2px">Waqt guzar gaya — kya ada ki?</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="resolveMissed('${p.key}','done',this)" style="padding:8px 14px;background:rgba(39,184,112,0.15);border:1px solid rgba(39,184,112,0.4);border-radius:8px;color:#27b870;font-size:13px;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif">Done ✓</button>
+      <button onclick="resolveMissed('${p.key}','missed',this)" style="padding:8px 14px;background:rgba(224,85,85,0.1);border:1px solid rgba(224,85,85,0.3);border-radius:8px;color:#e05555;font-size:13px;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif">Missed ✗</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+
+  // Auto remove after 30 sec if no response
+  setTimeout(() => banner.remove(), 30000);
+}
+
+function resolveMissed(key, status, btn) {
+  markPrayer(key, status);
+  document.getElementById('missedBanner')?.remove();
+}
+
+function updateNextPrayer() {
+  if (!state.timings) return;
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+  let next = null; let minDiff = Infinity;
+
+  PRAYERS.forEach(p => {
+    const pMin = parseTimeToMin(state.timings[p.apiKey]);
+    let diff = pMin - nowMin;
+    if (diff < 0) diff += 1440;
+    if (diff < minDiff) { minDiff = diff; next = { ...p, diff }; }
+  });
+
+  if (!next) return;
+  const hrs = Math.floor(minDiff / 60);
+  const mins = Math.floor(minDiff % 60);
+  const secs = 60 - now.getSeconds();
+
+  document.getElementById('nextPrayerName').textContent = next.arabic;
+  document.getElementById('nextPrayerTime').textContent = formatTime(state.timings[next.apiKey]);
+  document.getElementById('nextCountdown').textContent =
+    hrs > 0 ? `${hrs} ghanta ${mins} minute` : `${mins} min ${secs < 60 ? secs : '00'} sec`;
+}
+
+function isCurrentPrayer(key) {
+  if (!state.timings) return false;
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  let minDiff = Infinity; let nextKey = null;
+  PRAYERS.forEach(p => {
+    const pMin = parseTimeToMin(state.timings[p.apiKey]);
+    let diff = pMin - nowMin; if (diff < 0) diff += 1440;
+    if (diff < minDiff) { minDiff = diff; nextKey = p.key; }
+  });
+  return nextKey === key;
+}
+
+function isPrayerPassed(timeStr) {
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return parseTimeToMin(timeStr) < nowMin;
+}
+
+// ═══════════════════════════════════════════════════════
+// REPORT
+// ═══════════════════════════════════════════════════════
+function updateReport() {
+  const done = PRAYERS.filter(p => state.status[p.key] === 'done').length;
+  const missed = PRAYERS.filter(p => state.status[p.key] === 'missed').length;
+  const pending = 5 - done - missed;
+
+  document.getElementById('scoreNum').textContent = `${done}/5`;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statMissed').textContent = missed;
+  document.getElementById('statPending').textContent = pending;
+  document.getElementById('statStreak').textContent = state.streak;
+
+  const pct = done / 5;
+  const circ = 427;
+  const offset = circ - (pct * circ);
+  document.getElementById('ringProgress').style.strokeDashoffset = offset;
+
+  // Per-prayer list
+  const list = document.getElementById('reportList');
+  list.innerHTML = PRAYERS.map(p => {
+    const s = state.status[p.key] || 'pending';
+    const badgeClass = s === 'done' ? 'rr-done' : s === 'missed' ? 'rr-missed' : 'rr-pending';
+    const badgeText = s === 'done' ? '✓ Ada' : s === 'missed' ? '✗ Qaza' : '⏳ Pending';
+    const timeStr = state.timings ? formatTime(state.timings[p.apiKey]) : '--:--';
+    return `<div class="report-row">
+      <div class="rr-left">
+        <div class="rr-arabic">${p.arabic}</div>
+        <div class="rr-name">${p.key} — ${timeStr}</div>
+      </div>
+      <span class="rr-badge ${badgeClass}">${badgeText}</span>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// AI CHAT
+// ═══════════════════════════════════════════════════════
+function quickAsk(q) {
+  document.getElementById('askInput').value = q;
+  sendAsk();
+}
+
+// ═══════════════════════════════════════════════════════
+// ASK PAGE — SIRF PRAYER TIMES
+// ═══════════════════════════════════════════════════════
+function quickAsk(prayerKey) {
+  const area = document.getElementById('chatArea');
+  const empty = area.querySelector('.empty-chat');
+  if (empty) empty.remove();
+
+  const p = PRAYERS.find(x => x.key === prayerKey);
+  if (!p) return;
+
+  appendMsg('user', `${p.arabic} ka waqt kya hai?`);
+
+  setTimeout(() => {
+    if (!state.timings) {
+      appendMsg('bot', '⏳ Timings abhi load nahi huin — thodi der baad try karo.');
+      return;
+    }
+    const t = state.timings;
+    let reply = '';
+
+    if (prayerKey === 'Fajr') {
+      reply = `🌅 <b>الفجر — Fajr</b><br>Waqt: <b>${formatTime(t.Fajr)}</b><br>Khatam: Sunrise se pehle (${formatTime(t.Sunrise)})`;
+    } else if (prayerKey === 'Dhuhr') {
+      reply = `☀️ <b>الظهر — Dhuhr</b><br>Waqt: <b>${formatTime(t.Dhuhr)}</b><br>Khatam: Asr se pehle (${formatTime(t.Asr)})`;
+    } else if (prayerKey === 'Asr') {
+      reply = `🌤️ <b>العصر — Asr</b><br>Waqt: <b>${formatTime(t.Asr)}</b><br>Khatam: Sunset se pehle (${formatTime(t.Sunset)})`;
+    } else if (prayerKey === 'Maghrib') {
+      reply = `🌇 <b>المغرب — Maghrib</b><br>Waqt: <b>${formatTime(t.Maghrib)}</b><br>Khatam: Isha se pehle (${formatTime(t.Isha)})`;
+    } else if (prayerKey === 'Isha') {
+      reply = `🌙 <b>العشاء — Isha</b><br>Waqt: <b>${formatTime(t.Isha)}</b><br>Khatam: Midnight tak`;
+    }
+    appendMsg('bot', reply);
+  }, 300);
+}
+
+function sendAsk() {
+  const input = document.getElementById('askInput');
+  const raw = input.value.trim();
+  if (!raw) return;
+  const q = raw.toLowerCase();
+  input.value = '';
+
+  const area = document.getElementById('chatArea');
+  const empty = area.querySelector('.empty-chat');
+  if (empty) empty.remove();
+
+  appendMsg('user', raw);
+
+  // ── City detection — check if a known city is mentioned ──
+  const pakistanCities = [
+    'karachi','lahore','islamabad','rawalpindi','faisalabad','peshawar',
+    'quetta','multan','hyderabad','sialkot','gujranwala','bahawalpur',
+    'sargodha','sukkur','larkana','sheikhupura','jhang','rahim yar khan',
+    'mardan','gujrat','kasur','dera ghazi khan','nawabshah','mirpur khas',
+    'mingora','abbottabad','mansehra','kohat','nowshera','attock',
+    'chakwal','jhelum','mianwali','khushab','bhakkar','layyah',
+    'muzaffarabad','mirpur','kotli','rawalakot','gilgit','skardu'
+  ];
+
+  let detectedCity = null;
+  for (const city of pakistanCities) {
+    if (q.includes(city)) {
+      detectedCity = city.charAt(0).toUpperCase() + city.slice(1);
+      break;
+    }
+  }
+
+  // If different city detected — fetch its timings then answer
+  if (detectedCity && detectedCity.toLowerCase() !== (state.city || '').toLowerCase()) {
+    appendMsg('bot', `⏳ ${detectedCity} ki timings fetch kar raha hoon...`);
+    fetchCityTimings(detectedCity).then(timings => {
+      if (!timings) {
+        appendMsg('bot', `❌ ${detectedCity} ki timings nahi mili — dobara try karo.`);
+        return;
+      }
+      // Remove loading msg
+      const msgs = area.querySelectorAll('.chat-msg.bot');
+      msgs[msgs.length - 1].remove();
+
+      const t = timings;
+      const hasSab = /sab|tamam|all|panj|5 waqt|panchon/.test(q);
+      if (hasSab || !detectSinglePrayer(q)) {
+        if (!detectSinglePrayer(q) && !hasSab) {
+          appendMsg('bot', `🕌 Maafi — yeh app sirf namaz ke auqaat batata hai.<br><br>Kisi namaz ka waqt poochho jaise:<br>"${detectedCity} mein Fajr ka waqt"`);
+        } else {
+          appendMsg('bot', `📋 <b>Aaj ke Auqaat — ${detectedCity}</b><br><br>🌅 الفجر Fajr: <b>${formatTime(t.Fajr)}</b><br>☀️ الظهر Dhuhr: <b>${formatTime(t.Dhuhr)}</b><br>🌤️ العصر Asr: <b>${formatTime(t.Asr)}</b><br>🌇 المغرب Maghrib: <b>${formatTime(t.Maghrib)}</b><br>🌙 العشاء Isha: <b>${formatTime(t.Isha)}</b><br><br><small style="color:var(--text2)">📍 Sirf is sawaal ke liye — default city ${state.city} hi rahegi</small>`);
+        }
+      } else {
+        answerPrayerTime(q, timings, detectedCity);
+      }
+    });
+    return;
+  }
+
+  // Normal flow — saved city timings
+  setTimeout(() => {
+    if (!state.timings) {
+      appendMsg('bot', '⏳ Timings abhi load nahi huin — Times page pe check karo.');
+      return;
+    }
+    answerPrayerTime(q, state.timings, state.city);
+  }, 300);
+}
+
+async function fetchCityTimings(city) {
+  try {
+    const url = `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=Pakistan&method=1`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code === 200) return data.data.timings;
+    return null;
+  } catch(e) { return null; }
+}
+
+function detectSinglePrayer(q) {
+  return /fajr|fajar|subh|dhuhr|zuhr|zauhr|zohr|zohar|zahr|dopahar|asar|asr|assar|عصر|maghrib|mghrib|shaam|isha|ishraq|chasht|tahajjud|zawaal|zawal|tulu|ghurub/.test(q);
+}
+
+function answerPrayerTime(q, t, cityName) {
+  const hasFajr    = /fajr|fajar|subh|صبح|فجر/.test(q);
+  const hasDhuhr   = /dhuhr|zuhr|zauhr|zohr|zohar|zahr|dopahar|ظهر|ظہر/.test(q);
+  const hasAsr     = /asr|asar|assar|عصر/.test(q);
+  const hasMaghrib = /maghrib|mghrib|shaam|مغرب/.test(q);
+  const hasIsha    = /isha|عشاء/.test(q);
+  const hasIshraq  = /ishraq|ishraaq/.test(q);
+  const hasChasht  = /chasht|duha/.test(q);
+  const hasTahajjud= /tahajjud/.test(q);
+  const hasZawaal  = /zawaal|zawal/.test(q);
+  const hasTulu    = /tulu|sunrise|طلوع/.test(q);
+  const hasGhurub  = /ghurub|sunset|غروب/.test(q);
+  const hasSab     = /sab|tamam|all times|panj|5 waqt|panchon|tamam waqt|auqaat/.test(q);
+
+  if (hasFajr) {
+    appendMsg('bot', `🌅 <b>الفجر — Fajr</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Fajr)}</b><br>Khatam: Sunrise (${formatTime(t.Sunrise)}) se pehle`);
+  } else if (hasDhuhr) {
+    appendMsg('bot', `☀️ <b>الظهر — Dhuhr</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Dhuhr)}</b><br>Khatam: Asr (${formatTime(t.Asr)}) se pehle`);
+  } else if (hasAsr) {
+    appendMsg('bot', `🌤️ <b>العصر — Asr</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Asr)}</b><br>Khatam: Sunset (${formatTime(t.Sunset)}) se pehle`);
+  } else if (hasMaghrib) {
+    appendMsg('bot', `🌇 <b>المغرب — Maghrib</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Maghrib)}</b><br>Khatam: Isha (${formatTime(t.Isha)}) se pehle`);
+  } else if (hasIsha) {
+    appendMsg('bot', `🌙 <b>العشاء — Isha</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Isha)}</b><br>Khatam: Midnight tak`);
+  } else if (hasIshraq) {
+    const srMin = parseTimeToMin(t.Sunrise);
+    appendMsg('bot', `🌅 <b>Ishraq</b> — ${cityName}<br>Waqt: <b>${minToTime(srMin + 18)}</b><br>(Sunrise ke 15-20 min baad)`);
+  } else if (hasChasht) {
+    const srMin = parseTimeToMin(t.Sunrise);
+    const dhMin = parseTimeToMin(t.Dhuhr);
+    appendMsg('bot', `☀️ <b>Chasht / Duha</b> — ${cityName}<br>Waqt: <b>${minToTime(Math.floor((srMin+dhMin)/2))}</b>`);
+  } else if (hasTahajjud) {
+    const ishaMin = parseTimeToMin(t.Isha);
+    const fajrMin = parseTimeToMin(t.Fajr);
+    appendMsg('bot', `🌙 <b>Tahajjud</b> — ${cityName}<br>Afzal waqt: <b>${minToTime(Math.floor((ishaMin+fajrMin+1440)/2)%1440)}</b>`);
+  } else if (hasTulu) {
+    appendMsg('bot', `🌅 <b>Tulu-e-Aftab</b> — ${cityName}<br>Waqt: <b>${formatTime(t.Sunrise)}</b><br>⚠️ Makrooh — 20 min tak namaz na paro`);
+  } else if (hasGhurub) {
+    appendMsg('bot', `🌆 <b>Ghurub-e-Aftab</b> — ${cityName}<br>Waqt: <b>${formatTime(t.Sunset)}</b><br>⚠️ Makrooh`);
+  } else if (hasZawaal) {
+    appendMsg('bot', `🕛 <b>Zawaal</b> — ${cityName}<br>Waqt: <b>${formatTime(t.Dhuhr)}</b><br>⚠️ Makrooh`);
+  } else if (hasSab) {
+    appendMsg('bot', `📋 <b>Aaj ke Tamam Auqaat — ${cityName}</b><br><br>🌅 الفجر Fajr: <b>${formatTime(t.Fajr)}</b><br>☀️ الظهر Dhuhr: <b>${formatTime(t.Dhuhr)}</b><br>🌤️ العصر Asr: <b>${formatTime(t.Asr)}</b><br>🌇 المغرب Maghrib: <b>${formatTime(t.Maghrib)}</b><br>🌙 العشاء Isha: <b>${formatTime(t.Isha)}</b>`);
+  } else {
+    // Koi namaz keyword nahi mila — politely mana karo
+    appendMsg('bot', `🕌 Maafi — yeh app sirf namaz ke auqaat batata hai.<br><br>Kisi namaz ka waqt poochho:<br>• Fajr • Dhuhr • Asr • Maghrib • Isha<br>• Ishraq • Chasht • Tahajjud • Zawaal<br>• Ya kisi city ka naam likhein jaise "Lahore timings"`);
+  }
+}
+
+function appendMsg(role, text) {
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  div.innerHTML = `
+    <div class="msg-avatar ${role}">${role === 'bot' ? '🕌' : '👤'}</div>
+    <div class="msg-bubble">${text.replace(/\n/g, '<br>')}</div>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════
+function openCityModal() { document.getElementById('cityModal').classList.add('open'); }
+function closeCityModal() { document.getElementById('cityModal').classList.remove('open'); }
+function updateCityDisplay() {
+  const c = state.city || '---';
+  document.getElementById('cityDisplay').textContent = c;
+  document.getElementById('headerCity').textContent = c;
+}
+
+function changeCity() {
+  const city = document.getElementById('cityChangeInput').value.trim();
+  if (!city) { showToast('Sheher ka naam likhein'); return; }
+  state.city = city;
+  localStorage.setItem('sallat_city', city);
+  updateCityDisplay();
+  closeCityModal();
+  loadTimings(city);
+  showToast(`✅ Sheher: ${city}`);
+}
+
+function toggleNotif() {
+  const on = document.getElementById('notifToggle').checked;
+  state.notifEnabled = on;
+  localStorage.setItem('sallat_notif', on);
+  if (on && 'Notification' in window) {
+    Notification.requestPermission().then(p => {
+      if (p !== 'granted') {
+        showToast('Notification permission denied ⚠️');
+        document.getElementById('notifToggle').checked = false;
+        state.notifEnabled = false;
+        localStorage.setItem('sallat_notif', false);
+      } else {
+        showToast('🔔 Notifications on!');
+        scheduleAllNotifications();
+      }
+    });
+  } else if (!on) {
+    clearAllNotificationTimers();
+    showToast('🔕 Notifications off');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// NOTIFICATION SYSTEM
+// ═══════════════════════════════════════════════════════
+let notifTimers = [];
+
+function clearAllNotificationTimers() {
+  notifTimers.forEach(t => clearTimeout(t));
+  notifTimers = [];
+}
+
+async function showNotifViaSW(title, body, tag) {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification(title, {
+      body, tag,
+      requireInteraction: true,
+      silent: false,
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%2327b870"/><text y=".9em" font-size="80">🕌</text></svg>'
+    });
+  } catch(e) {
+    try { new Notification(title, { body, tag }); } catch(e2) { console.log('Notif err:', e2); }
+  }
+}
+
+function scheduleAllNotifications() {
+  if (!state.timings || !state.notifEnabled) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  clearAllNotificationTimers();
+
+  const now = new Date();
+  const nowMs = now.getTime();
+  const prayerEmojis = { Fajr:'🌅', Dhuhr:'☀️', Asr:'🌤️', Maghrib:'🌇', Isha:'🌙' };
+  let scheduled = 0;
+
+  PRAYERS.forEach(p => {
+    const parts = state.timings[p.apiKey].split(':').map(Number);
+    const prayerDate = new Date();
+    prayerDate.setHours(parts[0], parts[1], 0, 0);
+
+    if (prayerDate.getTime() <= nowMs) {
+      prayerDate.setDate(prayerDate.getDate() + 1);
+    }
+
+    const msUntil = prayerDate.getTime() - nowMs;
+    const emoji = prayerEmojis[p.key] || '🕌';
+
+    const t1 = setTimeout(() => {
+      if (!state.notifEnabled) return;
+      showNotifViaSW(
+        `${emoji} ${p.arabic} — ${p.key} ka Waqt!`,
+        `${state.city} mein ${p.key} — ${formatTime(state.timings[p.apiKey])}`,
+        `prayer-${p.key}`
+      );
+    }, msUntil);
+    notifTimers.push(t1);
+
+    const t2 = setTimeout(() => {
+      if (!state.notifEnabled) return;
+      if ((state.status[p.key] || 'pending') === 'pending') {
+        showNotifViaSW(
+          `⚠️ ${p.key} — Abhi tak ada nahi hui!`,
+          `${p.arabic} — foran ada kar lo! (${formatTime(state.timings[p.apiKey])})`,
+          `prayer-followup-${p.key}`
+        );
+      }
+    }, msUntil + 30 * 60 * 1000);
+    notifTimers.push(t2);
+    scheduled++;
+  });
+
+  showToast(`🔔 ${scheduled} namazein scheduled`);
+}
+
+function testNotif() {
+  if (!('Notification' in window)) {
+    showToast('Is browser mein notifications nahi hain');
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    showNotifViaSW(
+      '🕌 Test Notification',
+      'Sallat & Time Tracker — notifications kaam kar rahi hain!',
+      'test-notif'
+    );
+    showToast('Test notification bheji ✅');
+  } else {
+    Notification.requestPermission().then(p => {
+      if (p === 'granted') testNotif();
+      else showToast('Pehle permission dein ⚠️');
+    });
+  }
+}
+
+function resetRecord() {
+  if (!confirm('Kya aap aaj ka sara record reset karna chahte hain?')) return;
+  state.status = {};
+  localStorage.setItem('sallat_status', '{}');
+  renderTimings();
+  updateReport();
+  showToast('🔄 Record reset ho gaya');
+}
+
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(choice => {
+      if (choice.outcome === 'accepted') showToast('✅ App install ho gayi!');
+      deferredPrompt = null;
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// MIDNIGHT RESET
+// ═══════════════════════════════════════════════════════
+function checkMidnightReset() {
+  const lastDate = localStorage.getItem('sallat_lastDate');
+  const today = new Date().toDateString();
+  if (lastDate && lastDate !== today) {
+    // Check if all 5 done yesterday = streak continues
+    const yesterday = JSON.parse(localStorage.getItem('sallat_status') || '{}');
+    const allDone = PRAYERS.every(p => yesterday[p.key] === 'done');
+    if (!allDone) { state.streak = 0; localStorage.setItem('sallat_streak', 0); }
+    state.status = {};
+    localStorage.setItem('sallat_status', '{}');
+  }
+  localStorage.setItem('sallat_lastDate', today);
+
+  // Schedule next midnight check
+  const now = new Date();
+  const midnight = new Date(now); midnight.setHours(24,0,0,0);
+  setTimeout(() => { checkMidnightReset(); renderTimings(); updateReport(); }, midnight - now);
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function goTo(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  btn.classList.add('active');
+  if (page === 'report') updateReport();
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function parseTimeToMin(str) {
+  if (!str) return 0;
+  const [h, m] = str.split(':').map(Number);
+  return h * 60 + m;
+}
+function minToTime(min) {
+  const h = Math.floor(((min % 1440) + 1440) % 1440 / 60);
+  const m = Math.floor(min % 60);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+function formatTime(str) {
+  if (!str) return '--:--';
+  const [h, m] = str.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════════════
+// PWA — SERVICE WORKER
+// ═══════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  const swCode = `
+const CACHE = 'sallat-v2';
+
+self.addEventListener('install', e => { self.skipWaiting(); });
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    fetch(e.request)
+      .then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      })
+      .catch(() => caches.match(e.request))
+  );
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      if (list.length > 0) return list[0].focus();
+      return clients.openWindow('./');
+    })
+  );
+});
+  `;
+
+  const swBlob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swUrl, { scope: '/' })
+    .then(reg => {
+      console.log('SW registered, state:', reg.active ? 'active' : 'installing');
+    })
+    .catch(e => console.log('SW skipped (file:// ok):', e.message));
+}
+</script>
+
+<!-- PWA Manifest (inline) -->
+<script>
+const manifestData = {
+  name: 'Sallat & Time Tracker',
+  short_name: 'Sallat',
+  description: 'Pakistan Islamic Prayer Times Tracker',
+  start_url: '.',
+  display: 'standalone',
+  background_color: '#070f1c',
+  theme_color: '#27b870',
+  orientation: 'portrait',
+  icons: [
+    { src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%2327b870"/><text y=".9em" font-size="80">🕌</text></svg>', sizes: '192x192', type: 'image/svg+xml' },
+    { src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%2327b870"/><text y=".9em" font-size="80">🕌</text></svg>', sizes: '512x512', type: 'image/svg+xml' }
+  ]
+};
+const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+const manifestUrl = URL.createObjectURL(manifestBlob);
+const link = document.createElement('link');
+link.rel = 'manifest'; link.href = manifestUrl;
+document.head.appendChild(link);
+</script>
+</body></html>
