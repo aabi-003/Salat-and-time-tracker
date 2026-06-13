@@ -1258,6 +1258,17 @@ function sendAsk() {
 
   appendMsg('user', raw);
 
+  // ── Appreciation / greeting replies ──
+  if (/good|acha|achha|accha|badhiya|zabardast|shukriya|thank|شکریہ|wah|واہ|great|perfect|nice|brill|masha allah|jazak|👍|❤️|🙏/.test(q)) {
+    const replies = [
+      '🕌 Jazak Allah Khair! Namaz ke waqt se mutaliq kuch aur poochna ho toh zaroor poochhein.',
+      '🤲 Shukriya! Allah aap ki namazein qabool farmaye.',
+      '🕌 Jazak Allah! Koi aur waqt poochna ho toh batayein.',
+    ];
+    appendMsg('bot', replies[Math.floor(Math.random() * replies.length)]);
+    return;
+  }
+
   // ── City detection — check if a known city is mentioned ──
   const pakistanCities = [
     'karachi','lahore','islamabad','rawalpindi','faisalabad','peshawar',
@@ -1325,10 +1336,97 @@ async function fetchCityTimings(city) {
 }
 
 function detectSinglePrayer(q) {
-  return /fajr|fajar|subh|dhuhr|zuhr|zauhr|zohr|zohar|zahr|dopahar|asar|asr|assar|عصر|maghrib|mghrib|shaam|isha|ishraq|chasht|tahajjud|zawaal|zawal|tulu|ghurub/.test(q);
+  return /fajr|fajar|subh|dhuhr|zuhr|zauhr|zohr|zohar|zahr|dopahar|asar|asr|assar|عصر|maghrib|mghrib|shaam|isha|ishraq|chasht|tahajjud|zawaal|zawal|tulu|ghurub|makrooh|makruh|mamnoo|prohibited|abhi|is waqt|filhal|kaunsi namaz|konsi namaz|current/.test(q);
+}
+
+// ── Remaining time helper ──
+function getRemainingText(timeStr) {
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  let target = parseTimeToMin(timeStr);
+  let diff = target - nowMin;
+  if (diff < 0) diff += 1440; // next day
+  const hrs = Math.floor(diff / 60);
+  const mins = diff % 60;
+  if (hrs > 0) return `${hrs} ghanta ${mins} minute baqi`;
+  return `${mins} minute baqi`;
+}
+
+function hasTimeQuery(q) {
+  return /baqi|baki|kitna|remaining|left|kab|abhi|regia|regi|time pass|time bacha|waqt bacha|waqt baki|waqt baqi|pass|bacha|bach/.test(q);
+}
+
+function isPrayerActive(timeStr) {
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return parseTimeToMin(timeStr) <= nowMin;
+}
+
+// ── Current active prayer detector ──
+function getCurrentPrayer(t) {
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+
+  const fajr    = parseTimeToMin(t.Fajr);
+  const sunrise = parseTimeToMin(t.Sunrise);
+  const dhuhr   = parseTimeToMin(t.Dhuhr);
+  const asr     = parseTimeToMin(t.Asr);
+  const maghrib = parseTimeToMin(t.Maghrib);
+  const isha    = parseTimeToMin(t.Isha);
+
+  // Tahajjud: Isha ke baad midnight tak (approx)
+  const midnight = 24 * 60;
+
+  if (nowMin >= isha)    return { key: 'Isha',    arabic: 'العشاء', emoji: '🌙', start: t.Isha,    end: 'Midnight tak' };
+  if (nowMin >= maghrib) return { key: 'Maghrib', arabic: 'المغرب', emoji: '🌇', start: t.Maghrib, end: `Isha (${formatTime(t.Isha)}) se pehle` };
+  if (nowMin >= asr)     return { key: 'Asr',     arabic: 'العصر',  emoji: '🌤️', start: t.Asr,     end: `Sunset (${formatTime(t.Sunset)}) se pehle` };
+  if (nowMin >= dhuhr)   return { key: 'Dhuhr',   arabic: 'الظهر',  emoji: '☀️', start: t.Dhuhr,   end: `Asr (${formatTime(t.Asr)}) se pehle` };
+  if (nowMin >= sunrise) return { key: 'Chasht',  arabic: 'چاشت',   emoji: '🌅', start: formatTime(sunrise + 18), end: `Zawaal se pehle`, note: 'Ishraq/Chasht ka waqt — Farz namaz ka waqt nahi' };
+  if (nowMin >= fajr)    return { key: 'Fajr',    arabic: 'الفجر',  emoji: '🌅', start: t.Fajr,    end: `Sunrise (${formatTime(t.Sunrise)}) se pehle` };
+  // Raat ka waqt — Tahajjud
+  return { key: 'Tahajjud', arabic: 'تہجد', emoji: '🌙', start: formatTime(isha), end: `Fajr (${formatTime(t.Fajr)}) se pehle`, note: 'Raat ka waqt — Tahajjud ka behtar mauqa' };
 }
 
 function answerPrayerTime(q, t, cityName) {
+  // ── "Abhi kaunsi namaz" / current prayer query ──
+  const hasCurrentQuery = /abhi|ابھی|is waqt|filhal|foran|kaunsi namaz|koun si namaz|konsi namaz|current|chalu|chal rahi|chal raha/.test(q);
+  if (hasCurrentQuery && !(/fajr|fajar|subh|dhuhr|zuhr|zohr|asr|asar|maghrib|shaam|isha/i.test(q))) {
+    const cp = getCurrentPrayer(t);
+    let msg = `🕌 <b>Abhi — ${cityName}</b><br><br>`;
+    msg += `${cp.emoji} <b>${cp.arabic} — ${cp.key}</b><br>`;
+    msg += `Shuru: <b>${cp.start}</b><br>`;
+    msg += `Khatam: ${cp.end}`;
+    if (cp.note) msg += `<br><small style="color:var(--text2)">ℹ️ ${cp.note}</small>`;
+    appendMsg('bot', msg);
+    return;
+  }
+
+  // ── Generic "kitna waqt bacha/pass" without specific namaz name ──
+  const isGenericTimeQ = hasTimeQuery(q) && !(/fajr|fajar|subh|dhuhr|zuhr|zohr|asr|asar|maghrib|shaam|isha|ishraq|chasht|tahajjud|zawaal/i.test(q));
+  if (isGenericTimeQ) {
+    const prayers = [
+      { key: 'Fajr',    arabic: 'الفجر',  time: t.Fajr },
+      { key: 'Dhuhr',   arabic: 'الظهر',  time: t.Dhuhr },
+      { key: 'Asr',     arabic: 'العصر',  time: t.Asr },
+      { key: 'Maghrib', arabic: 'المغرب', time: t.Maghrib },
+      { key: 'Isha',    arabic: 'العشاء', time: t.Isha },
+    ];
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    let nextP = null;
+    for (const p of prayers) {
+      if (parseTimeToMin(p.time) > nowMin) { nextP = p; break; }
+    }
+    if (nextP) {
+      const diff = parseTimeToMin(nextP.time) - nowMin;
+      const h = Math.floor(diff / 60), m = diff % 60;
+      const rem = h > 0 ? `${h} ghanta ${m} minute` : `${m} minute`;
+      appendMsg('bot', `${nextP.arabic} — ${nextP.key} mein <b>${rem}</b> baqi`);
+    } else {
+      appendMsg('bot', 'Isha ka waqt chal raha hai — aaj ki sab namazein ho chuki hain');
+    }
+    return;
+  }
   const hasFajr    = /fajr|fajar|subh|صبح|فجر/.test(q);
   const hasDhuhr   = /dhuhr|zuhr|zauhr|zohr|zohar|zahr|dopahar|ظهر|ظہر/.test(q);
   const hasAsr     = /asr|asar|assar|عصر/.test(q);
@@ -1340,18 +1438,50 @@ function answerPrayerTime(q, t, cityName) {
   const hasZawaal  = /zawaal|zawal/.test(q);
   const hasTulu    = /tulu|sunrise|طلوع/.test(q);
   const hasGhurub  = /ghurub|sunset|غروب/.test(q);
+  const hasMakrooh = /makrooh|makruh|mamnoo|prohibited/.test(q);
   const hasSab     = /sab|tamam|all times|panj|5 waqt|panchon|tamam waqt|auqaat/.test(q);
+  const wantsRemaining = hasTimeQuery(q);
 
   if (hasFajr) {
-    appendMsg('bot', `🌅 <b>الفجر — Fajr</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Fajr)}</b><br>Khatam: Sunrise (${formatTime(t.Sunrise)}) se pehle`);
+    const started = isPrayerActive(t.Fajr);
+    if (wantsRemaining) {
+      if (!started) appendMsg('bot', `🌅 <b>الفجر — Fajr</b> — ${cityName}<br>Waqt: <b>${formatTime(t.Fajr)}</b><br>⏳ <b>${getRemainingText(t.Fajr)}</b>`);
+      else appendMsg('bot', `🌅 <b>الفجر — Fajr</b> — ${cityName}<br>Shuru ho gaya: <b>${formatTime(t.Fajr)}</b><br>Khatam: Sunrise (${formatTime(t.Sunrise)}) se pehle<br>⏳ Sunrise mein: <b>${getRemainingText(t.Sunrise)}</b>`);
+    } else {
+      appendMsg('bot', `🌅 <b>الفجر — Fajr</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Fajr)}</b><br>Khatam: Sunrise (${formatTime(t.Sunrise)}) se pehle`);
+    }
   } else if (hasDhuhr) {
-    appendMsg('bot', `☀️ <b>الظهر — Dhuhr</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Dhuhr)}</b><br>Khatam: Asr (${formatTime(t.Asr)}) se pehle`);
+    const started = isPrayerActive(t.Dhuhr);
+    if (wantsRemaining) {
+      if (!started) appendMsg('bot', `☀️ <b>الظهر — Dhuhr</b> — ${cityName}<br>Waqt: <b>${formatTime(t.Dhuhr)}</b><br>⏳ <b>${getRemainingText(t.Dhuhr)}</b>`);
+      else appendMsg('bot', `☀️ <b>الظهر — Dhuhr</b> — ${cityName}<br>Shuru ho gaya: <b>${formatTime(t.Dhuhr)}</b><br>Khatam: Asr (${formatTime(t.Asr)}) se pehle<br>⏳ Asr mein: <b>${getRemainingText(t.Asr)}</b>`);
+    } else {
+      appendMsg('bot', `☀️ <b>الظهر — Dhuhr</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Dhuhr)}</b><br>Khatam: Asr (${formatTime(t.Asr)}) se pehle`);
+    }
   } else if (hasAsr) {
-    appendMsg('bot', `🌤️ <b>العصر — Asr</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Asr)}</b><br>Khatam: Sunset (${formatTime(t.Sunset)}) se pehle`);
+    const started = isPrayerActive(t.Asr);
+    if (wantsRemaining) {
+      if (!started) appendMsg('bot', `🌤️ <b>العصر — Asr</b> — ${cityName}<br>Waqt: <b>${formatTime(t.Asr)}</b><br>⏳ <b>${getRemainingText(t.Asr)}</b>`);
+      else appendMsg('bot', `🌤️ <b>العصر — Asr</b> — ${cityName}<br>Shuru ho gaya: <b>${formatTime(t.Asr)}</b><br>Khatam: Sunset (${formatTime(t.Sunset)}) se pehle<br>⏳ Sunset mein: <b>${getRemainingText(t.Sunset)}</b>`);
+    } else {
+      appendMsg('bot', `🌤️ <b>العصر — Asr</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Asr)}</b><br>Khatam: Sunset (${formatTime(t.Sunset)}) se pehle`);
+    }
   } else if (hasMaghrib) {
-    appendMsg('bot', `🌇 <b>المغرب — Maghrib</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Maghrib)}</b><br>Khatam: Isha (${formatTime(t.Isha)}) se pehle`);
+    const started = isPrayerActive(t.Maghrib);
+    if (wantsRemaining) {
+      if (!started) appendMsg('bot', `🌇 <b>المغرب — Maghrib</b> — ${cityName}<br>Waqt: <b>${formatTime(t.Maghrib)}</b><br>⏳ <b>${getRemainingText(t.Maghrib)}</b>`);
+      else appendMsg('bot', `🌇 <b>المغرب — Maghrib</b> — ${cityName}<br>Shuru ho gaya: <b>${formatTime(t.Maghrib)}</b><br>Khatam: Isha (${formatTime(t.Isha)}) se pehle<br>⏳ Isha mein: <b>${getRemainingText(t.Isha)}</b>`);
+    } else {
+      appendMsg('bot', `🌇 <b>المغرب — Maghrib</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Maghrib)}</b><br>Khatam: Isha (${formatTime(t.Isha)}) se pehle`);
+    }
   } else if (hasIsha) {
-    appendMsg('bot', `🌙 <b>العشاء — Isha</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Isha)}</b><br>Khatam: Midnight tak`);
+    const started = isPrayerActive(t.Isha);
+    if (wantsRemaining) {
+      if (!started) appendMsg('bot', `🌙 <b>العشاء — Isha</b> — ${cityName}<br>Waqt: <b>${formatTime(t.Isha)}</b><br>⏳ <b>${getRemainingText(t.Isha)}</b>`);
+      else appendMsg('bot', `🌙 <b>العشاء — Isha</b> — ${cityName}<br>Shuru ho gaya: <b>${formatTime(t.Isha)}</b><br>Khatam: Midnight tak`);
+    } else {
+      appendMsg('bot', `🌙 <b>العشاء — Isha</b> — ${cityName}<br>Shuru: <b>${formatTime(t.Isha)}</b><br>Khatam: Midnight tak`);
+    }
   } else if (hasIshraq) {
     const srMin = parseTimeToMin(t.Sunrise);
     appendMsg('bot', `🌅 <b>Ishraq</b> — ${cityName}<br>Waqt: <b>${minToTime(srMin + 18)}</b><br>(Sunrise ke 15-20 min baad)`);
@@ -1369,6 +1499,11 @@ function answerPrayerTime(q, t, cityName) {
     appendMsg('bot', `🌆 <b>Ghurub-e-Aftab</b> — ${cityName}<br>Waqt: <b>${formatTime(t.Sunset)}</b><br>⚠️ Makrooh`);
   } else if (hasZawaal) {
     appendMsg('bot', `🕛 <b>Zawaal</b> — ${cityName}<br>Waqt: <b>${formatTime(t.Dhuhr)}</b><br>⚠️ Makrooh`);
+  } else if (hasMakrooh) {
+    const srMin  = parseTimeToMin(t.Sunrise);
+    const dhMin  = parseTimeToMin(t.Dhuhr);
+    const setMin = parseTimeToMin(t.Sunset);
+    appendMsg('bot', `⚠️ <b>Makrooh Auqaat — ${cityName}</b><br><br>🌅 <b>Tulu-e-Aftab (Sunrise)</b><br>Waqt: ${formatTime(t.Sunrise)} — ${minToTime(srMin + 20)}<br><small>Sunrise ke baad 20 min tak namaz makrooh hai</small><br><br>🕛 <b>Zawaal (Solar Noon)</b><br>Waqt: ${formatTime(t.Dhuhr)} ke aas paas<br><small>Jab tak suraj bil-kul beech mein ho — namaz na paro</small><br><br>🌆 <b>Ghurub-e-Aftab (Sunset)</b><br>Waqt: ${formatTime(t.Sunset)} se pehle<br><small>Sunset ke waqt tak namaz makrooh hai</small>`);
   } else if (hasSab) {
     appendMsg('bot', `📋 <b>Aaj ke Tamam Auqaat — ${cityName}</b><br><br>🌅 الفجر Fajr: <b>${formatTime(t.Fajr)}</b><br>☀️ الظهر Dhuhr: <b>${formatTime(t.Dhuhr)}</b><br>🌤️ العصر Asr: <b>${formatTime(t.Asr)}</b><br>🌇 المغرب Maghrib: <b>${formatTime(t.Maghrib)}</b><br>🌙 العشاء Isha: <b>${formatTime(t.Isha)}</b>`);
   } else {
@@ -1416,17 +1551,27 @@ function toggleNotif() {
   state.notifEnabled = on;
   localStorage.setItem('sallat_notif', on);
   if (on && 'Notification' in window) {
-    Notification.requestPermission().then(p => {
-      if (p !== 'granted') {
-        showToast('Notification permission denied ⚠️');
-        document.getElementById('notifToggle').checked = false;
-        state.notifEnabled = false;
-        localStorage.setItem('sallat_notif', false);
-      } else {
-        showToast('🔔 Notifications on!');
-        scheduleAllNotifications();
-      }
-    });
+    if (Notification.permission === 'granted') {
+      showToast('🔔 Notifications on!');
+      scheduleAllNotifications();
+    } else if (Notification.permission === 'denied') {
+      showToast('⚠️ Permission blocked — Chrome Settings > Site Settings > Notifications se allow karo');
+      document.getElementById('notifToggle').checked = false;
+      state.notifEnabled = false;
+      localStorage.setItem('sallat_notif', false);
+    } else {
+      Notification.requestPermission().then(p => {
+        if (p !== 'granted') {
+          showToast('⚠️ Permission nahi mili — Settings mein allow karo');
+          document.getElementById('notifToggle').checked = false;
+          state.notifEnabled = false;
+          localStorage.setItem('sallat_notif', false);
+        } else {
+          showToast('🔔 Notifications on!');
+          scheduleAllNotifications();
+        }
+      });
+    }
   } else if (!on) {
     clearAllNotificationTimers();
     showToast('🔕 Notifications off');
@@ -1443,17 +1588,64 @@ function clearAllNotificationTimers() {
   notifTimers = [];
 }
 
-async function showNotifViaSW(title, body, tag) {
+// ── Play azan bell sound ──
+function playNotifSound() {
   try {
-    const reg = await navigator.serviceWorker.ready;
-    await reg.showNotification(title, {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // 3 bell tones — reminder style
+    const tones = [523.25, 659.25, 783.99]; // C5, E5, G5
+    tones.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const start = ctx.currentTime + i * 0.5;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.5, start + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 1.2);
+      osc.start(start); osc.stop(start + 1.2);
+    });
+  } catch(e) { console.log('Sound err:', e); }
+}
+
+// ── Vibration pattern ──
+function playVibration() {
+  try {
+    if ('vibrate' in navigator) {
+      // Long-short-long-short pattern — reminder feel
+      navigator.vibrate([400, 200, 400, 200, 800]);
+    }
+  } catch(e) {}
+}
+
+async function showNotifViaSW(title, body, tag) {
+  // Play sound + vibration
+  playNotifSound();
+  playVibration();
+
+  const isLocalFile = location.protocol === 'file:' || location.href.startsWith('content://');
+  if (isLocalFile) {
+    try { new Notification(title, { body, tag }); } catch(e) { console.log('Direct notif err:', e); }
+    return;
+  }
+  try {
+    const swReady = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, rej) => setTimeout(() => rej(new Error('SW timeout')), 3000))
+    ]);
+    await swReady.showNotification(title, {
       body, tag,
       requireInteraction: true,
-      silent: false,
+      vibrate: [400, 200, 400, 200, 800],
       icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%2327b870"/><text y=".9em" font-size="80">🕌</text></svg>'
     });
   } catch(e) {
-    try { new Notification(title, { body, tag }); } catch(e2) { console.log('Notif err:', e2); }
+    // SW failed — try direct Notification
+    try {
+      const n = new Notification(title, { body, tag, requireInteraction: true });
+      n.onshow = () => playVibration();
+    } catch(e2) { console.log('Notif fallback err:', e2); }
   }
 }
 
@@ -1652,9 +1844,16 @@ self.addEventListener('notificationclick', e => {
 
   const swBlob = new Blob([swCode], { type: 'application/javascript' });
   const swUrl = URL.createObjectURL(swBlob);
-  navigator.serviceWorker.register(swUrl, { scope: '/' })
+  // Blob SW scope must match the blob origin — use './' for page-relative scope
+  navigator.serviceWorker.register(swUrl, { scope: './' })
     .then(reg => {
       console.log('SW registered, state:', reg.active ? 'active' : 'installing');
+      // Auto-schedule if notif already enabled
+      navigator.serviceWorker.ready.then(() => {
+        if (state.notifEnabled && Notification.permission === 'granted') {
+          scheduleAllNotifications();
+        }
+      });
     })
     .catch(e => console.log('SW skipped (file:// ok):', e.message));
 }
