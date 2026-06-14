@@ -1390,7 +1390,7 @@ function getCurrentPrayer(t) {
 function answerPrayerTime(q, t, cityName) {
   // ── "Abhi kaunsi namaz" / current prayer query ──
   const hasCurrentQuery = /abhi|ابھی|is waqt|filhal|foran|kaunsi namaz|koun si namaz|konsi namaz|current|chalu|chal rahi|chal raha/.test(q);
-  if (hasCurrentQuery && !(/fajr|fajar|subh|dhuhr|zuhr|zohr|asr|asar|maghrib|shaam|isha/i.test(q))) {
+  if (hasCurrentQuery && !(/fajr|fajar|subh|dhuhr|zuhr|zauhr|zohr|zohar|zahr|dopahar|asr|asar|maghrib|shaam|isha/i.test(q))) {
     const cp = getCurrentPrayer(t);
     let msg = `🕌 <b>Abhi — ${cityName}</b><br><br>`;
     msg += `${cp.emoji} <b>${cp.arabic} — ${cp.key}</b><br>`;
@@ -1402,7 +1402,7 @@ function answerPrayerTime(q, t, cityName) {
   }
 
   // ── Generic "kitna waqt bacha/pass" without specific namaz name ──
-  const isGenericTimeQ = hasTimeQuery(q) && !(/fajr|fajar|subh|dhuhr|zuhr|zohr|asr|asar|maghrib|shaam|isha|ishraq|chasht|tahajjud|zawaal/i.test(q));
+  const isGenericTimeQ = hasTimeQuery(q) && !(/fajr|fajar|subh|dhuhr|zuhr|zauhr|zohr|zohar|zahr|dopahar|asr|asar|maghrib|shaam|isha|ishraq|chasht|tahajjud|zawaal/i.test(q));
   if (isGenericTimeQ) {
     const prayers = [
       { key: 'Fajr',    arabic: 'الفجر',  time: t.Fajr },
